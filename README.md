@@ -16,7 +16,7 @@
 ## УСТАНОВКА
 1. Скачайте файлы из репозитория или напрямую:
 ```
-git pull https://github.com/mrzff1/autotrolltg
+git clone https://github.com/mrzff1/autotrolltg
 ```
 2. Установите необходимые библиотеки:
 ```
