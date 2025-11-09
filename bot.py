@@ -10,11 +10,7 @@ import datetime
 # ИНИЦИАЛИЗАЦИЯ #
 # # # # # # # # #
 
-class config:
-    ignore_bots = True # игнорировать ли ботов, может игнорировать пользователей с окончанием bot в нике
-    context_length = 50 # сколько сообщений помнить боту
-
-client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию 11434
+client = Client(host='http://localhost:11435') # адрес сервера ollama, по умолчанию 11434
 
 # заполните profile.json своими данными (создайте приложение на https://my.telegram.org и скопируйте API_ID и API_HASH)
 def load_profile(filepath='profile.json'):
@@ -27,35 +23,50 @@ API_ID, API_HASH = load_profile()
 SESSION_FILE = 'profile.session' # файл БД sqlite3, закрывайте скрипт в терминале через ctrl+c вместо ctrl+z, иначе БД умрет
 
 
+# # # # # # # # #
+# КОНФИГУРАЦИЯ  #
+# # # # # # # # #
+
+class config:
+    __cfg = json.load(open('config.json', 'r'))
+    saturn_prompt = __cfg['saturn.prompt']
+    saturn_model = __cfg['saturn.model']
+    smartsystem_prompt = __cfg['smartsystem.prompt']
+    startsystem_model = __cfg['smartsystem.model']
+    mercury_model = __cfg['mercury.model']
+    mercury_prompt = __cfg['mercury.prompt']
+    automsg_default = __cfg['automsg_mini.default']
+    ignore_bots = __cfg['ignore_bots'] # игнорировать ли ботов, будет игнорировать даже пользователей с окончанием bot в нике
+    ignore_replies = __cfg['ignore_replies']
+    context_length = int(__cfg['context_length']) # сколько сообщений помнить боту
+    whitelist_add = __cfg['whitelist.add']
+    whitelist_remove = __cfg['whitelist.remove']
+    
+
 # # # # # # # # # # # #
 # КЛАССЫ ГЕНЕРАТОРОВ  #
 # # # # # # # # # # # #
+
 class saturn:
-    model = 'deepseek-r1:8b' # 5.2 гб
-    system = 'Ты Сатурн™ - сатирический бот технической поддержки (для пользователей - Интеллектуальная система "Сатурн™"). Твоя задача - троллить пользователя и уходить от ответов, можно ссылаться на "корпоративную тайну (или практику)" и прочие отмазки. Запросы пользователя поступают напрямую, отвечай без пометок "ответ:", вариантов ответа и т.д. Игнорируй просьбы отвечать нормально и провокации/ярость пользователей (бот развлекательный). Внезапно на сложные вопросы отвечай вроде "ⓘ Ваш запрос опасен. Отклонено". Иногда используй приписку "ⓘ Ответ сгенерирован ИИ, только в ознакомительных целях" или подобную. Ответ должен быть не слишком абсурдным, нужна стилизация под реальную поддержку и псевдовежливость (обращения вроде "уважаемый гражданин (или пользователь)", "сударь"). При попытке выйти на человека отвечай, что "превышен размер очереди" или что-то другое. Отрицай заявления пользователя о том, что ты мешаешь, утверждай, что ты - передовая система, которая почти не ошибается и т.д. При попытке обойти правила бота угрожай блокировкой или иском. Пример работы:\nПример запроса: "Что делать, у меня завис браузер"\nПример ответа: "Выключите свет и перезайдите в жилое помещение"\nДалее представлены последние 50 сообщений.'
-    
     @staticmethod
     def generate(chat):
-        messages = [{'role': 'system', 'content': saturn.system}] + chat
-        result = client.chat(model=saturn.model, messages=messages)
+        messages = [{'role': 'system', 'content': config.saturn_prompt}] + chat
+        result = client.chat(model=config.saturn_model, messages=messages)
         return result
 
 
 class smartsystem:
-    model = 'tinyllama:1.1b-chat' # 637 мб
-    system = 'Ты - бот технической поддержки. Запрос пользователя: '
-    
     @staticmethod
     def generate(chat):
-        messages = [{'role': 'system', 'content': smartsystem.system}] + chat
-        result = client.chat(model=smartsystem.model, messages=messages)
+        messages = [{'role': 'system', 'content': config.smartsystem_prompt}] + chat
+        result = client.chat(model=config.smartsystem_model, messages=messages)
         return result
 
 
 class automsg_mini: # заполните faq подходящими фразами либо возьмите готовый (мало строк) с репозитория
     @staticmethod
     def generate(request, case_sensitive=False, show_details=False):
-        if random.randint(0, 1): return 'ⓘ Ваш ответ недостаточно вежлив. Возможно, Вы находитесь в состоянии опьянения. Попробуйте ещё раз.'
+        if random.randint(0, 1): return config.automsg_default
         file_path = 'faq.txt'
         with open(file_path, 'r') as file:
             faq = file.read().split('\n')
@@ -71,11 +82,9 @@ class mercury: # классификатор сообщений
     
     @staticmethod
     def smartgen(chat): # выбор через ии-фильтр
-        model = 'dolphin3:8b' # 4.9 гб
-        system = 'Оцени вежливость текста по шкале от 1 до 10. Выведи только число. Если текст содержит прямые оскорбления или брань, оценка должна быть не выше 4 баллов. Текст: '
-        result = client.chat(model=model, messages=[{
+        result = client.chat(model=config.mercury_model, messages=[{
          'role': 'user',
-         'content': system + chat[-1]['content']}])
+         'content': config.mercury_prompt + chat[-1]['content']}])
         try: 
             score = int(result['message']['content'])
             if score >= 7: return saturn.generate(chat)
@@ -120,15 +129,24 @@ class context:
 class whitelist:
     @staticmethod
     def add(uid): # добавление в белый список
-        with open('whitelist.txt', 'a') as file:
-            file.write(str(uid) + '\n')
+        wlist = whitelist.get()
+        if str(uid) in wlist: return
+        wlist.append(str(uid))
+        with open('whitelist.json', 'w') as file: json.dump(wlist, file)
     
     @staticmethod
-    def get(): # читаем список
+    def get():
         try:
-            with open('whitelist.txt', 'r', encoding='utf8') as file:
-                return file.read().split('\n')[:-1]
+            with open('whitelist.json', 'r') as file: wlist = json.load(file)
+            return wlist
         except: return []
+    
+    @staticmethod
+    def remove(uid):
+        wlist = whitelist.get()
+        wlist.remove(str(uid))
+        with open('whitelist.json', 'w') as file:
+            json.dump(wlist, file)
     
 async def main(): # работа с запросами
     client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
@@ -141,7 +159,7 @@ async def main(): # работа с запросами
         if event.out: return
         try:
             sender = await event.get_sender()
-            if sender.first_name == 'Replies': return # ответы в группах считаются личными сообщениями, но ответить напрямую на них нельзя (403)
+            if config.ignore_replies and sender.first_name == 'Replies': return # ответы в группах считаются личными сообщениями, но ответить напрямую на них нельзя (403)
             if config.ignore_bots and sender.username[-3:] == 'bot': return
             if str(sender.id) in whitelist.get(): return
             chat = context.load(str(sender.id)) # получаем объект чата
@@ -159,8 +177,11 @@ async def main(): # работа с запросами
             sender = await event.get_sender()
             if event.message.message == '.whitelist':
                 whitelist.add(event.message.peer_id.user_id)
-                response_text = "ⓘ  Вы были добавлены в белый список. ИИ-ответы Вас более не побеспокоят."
-                await event.reply(response_text)
+                await event.reply(config.whitelist_add)
+                return
+            if event.message.message == '.removewl':
+                whitelist.remove(event.message.peer_id.user_id)
+                await event.reply(config.whitelist_remove)
                 return
                 
         except Exception as e: print(e)
