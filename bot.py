@@ -10,7 +10,7 @@ import datetime
 # ИНИЦИАЛИЗАЦИЯ #
 # # # # # # # # #
 
-client = Client(host='http://localhost:11435') # адрес сервера ollama, по умолчанию 11434
+client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию 11434
 
 # заполните profile.json своими данными (создайте приложение на https://my.telegram.org и скопируйте API_ID и API_HASH)
 def load_profile(filepath='profile.json'):
@@ -32,7 +32,7 @@ class config:
     saturn_prompt = __cfg['saturn.prompt']
     saturn_model = __cfg['saturn.model']
     smartsystem_prompt = __cfg['smartsystem.prompt']
-    startsystem_model = __cfg['smartsystem.model']
+    smartsystem_model = __cfg['smartsystem.model']
     mercury_model = __cfg['mercury.model']
     mercury_prompt = __cfg['mercury.prompt']
     automsg_default = __cfg['automsg_mini.default']
@@ -160,7 +160,8 @@ async def main(): # работа с запросами
         try:
             sender = await event.get_sender()
             if config.ignore_replies and sender.first_name == 'Replies': return # ответы в группах считаются личными сообщениями, но ответить напрямую на них нельзя (403)
-            if config.ignore_bots and sender.username[-3:] == 'bot': return
+            if sender.username:
+                if config.ignore_bots and sender.username[-3:] == 'bot': return
             if str(sender.id) in whitelist.get(): return
             chat = context.load(str(sender.id)) # получаем объект чата
             chat.append({'role':'user', 'content': f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {event.message.message}"})
