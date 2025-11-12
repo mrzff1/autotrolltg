@@ -10,7 +10,7 @@ import datetime
 # ИНИЦИАЛИЗАЦИЯ #
 # # # # # # # # #
 
-client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию 11434
+client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию localhost:11434
 
 # заполните profile.json своими данными (создайте приложение на https://my.telegram.org и скопируйте API_ID и API_HASH)
 def load_profile(filepath='profile.json'):
@@ -29,10 +29,10 @@ SESSION_FILE = 'profile.session' # файл БД sqlite3, закрывайте �
 
 class config:
     __cfg = json.load(open('config.json', 'r'))
-    saturn_prompt = __cfg['saturn.prompt']
     saturn_model = __cfg['saturn.model']
-    smartsystem_prompt = __cfg['smartsystem.prompt']
     smartsystem_model = __cfg['smartsystem.model']
+    saturn_prompts = __cfg['saturn.chanced_prompts']
+    smartsystem_prompts = __cfg['smartsystem.chanced_prompts']
     mercury_model = __cfg['mercury.model']
     mercury_prompt = __cfg['mercury.prompt']
     automsg_default = __cfg['automsg_mini.default']
@@ -41,6 +41,8 @@ class config:
     context_length = int(__cfg['context_length']) # сколько сообщений помнить боту
     whitelist_add = __cfg['whitelist.add']
     whitelist_remove = __cfg['whitelist.remove']
+    politeness_smartsystem = int(__cfg['politeness.smartsystem'])
+    politeness_saturn = int(__cfg['politeness.saturn'])
     
 
 # # # # # # # # # # # #
@@ -50,7 +52,10 @@ class config:
 class saturn:
     @staticmethod
     def generate(chat):
-        messages = [{'role': 'system', 'content': config.saturn_prompt}] + chat
+        chanced_prompts = config.saturn_prompts
+        prompt = random.choices([cprompt['prompt'] for cprompt in chanced_prompts], weights = [cprompt['chance'] for cprompt in chanced_prompts])[0]
+        print(prompt)
+        messages = [{'role': 'system', 'content': prompt}] + chat
         result = client.chat(model=config.saturn_model, messages=messages)
         return result
 
@@ -58,7 +63,9 @@ class saturn:
 class smartsystem:
     @staticmethod
     def generate(chat):
-        messages = [{'role': 'system', 'content': config.smartsystem_prompt}] + chat
+        chanced_prompts = config.smartsystem_prompts
+        prompt = random.choices([cprompt['prompt'] for cprompt in chanced_prompts], weights = [cprompt['chance'] for cprompt in chanced_prompts])[0]
+        messages = [{'role': 'system', 'content': prompt}] + chat
         result = client.chat(model=config.smartsystem_model, messages=messages)
         return result
 
@@ -87,8 +94,8 @@ class mercury: # классификатор сообщений
          'content': config.mercury_prompt + chat[-1]['content']}])
         try: 
             score = int(result['message']['content'])
-            if score >= 7: return saturn.generate(chat)
-            elif 5 < score < 7: return smartsystem.generate(chat)
+            if score >= config.politeness_saturn: return saturn.generate(chat)
+            elif config.politeness_smartsystem < score < config.politeness_saturn: return smartsystem.generate(chat)
             else: return {'message':{'content':automsg_mini.generate(chat[-1]['content'])}}
         except: return mercury.simplegen(chat) # если нейросеть выдала не число (за сотни тестов такого не происходило), будет случайный выбор
 
