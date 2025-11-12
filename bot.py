@@ -54,7 +54,6 @@ class saturn:
     def generate(chat):
         chanced_prompts = config.saturn_prompts
         prompt = random.choices([cprompt['prompt'] for cprompt in chanced_prompts], weights = [cprompt['chance'] for cprompt in chanced_prompts])[0]
-        print(prompt)
         messages = [{'role': 'system', 'content': prompt}] + chat
         result = client.chat(model=config.saturn_model, messages=messages)
         return result
