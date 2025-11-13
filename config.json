@@ -38,6 +38,10 @@
   
   "ignore_replies": true,
   
+  "mercury.scripting_prompts": true,
+  
+  "mercury.context_length": 7,
+  
   "context_length": 50,
   
   "politeness.smartsystem": 5,
