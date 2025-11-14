@@ -10,7 +10,7 @@ import datetime
 # ИНИЦИАЛИЗАЦИЯ #
 # # # # # # # # #
 
-client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию localhost:11434
+client = Client(host='http://localhost:11435') # адрес сервера ollama, по умолчанию localhost:11434
 
 # заполните profile.json своими данными (создайте приложение на https://my.telegram.org и скопируйте API_ID и API_HASH)
 def load_profile(filepath='profile.json'):
@@ -115,7 +115,8 @@ class mercury: # классификатор сообщений
         suffixes = [i['suffix'] for i in tuned]
         
         messages = [{'role': 'system', 'content': "Выведи только одно ключевое слово согласно наиболее подходящему условию касательно диалога с пользователем. Условия: \nЕсли ничего не подходит, выведи \"nothing\"" + "\n".join(conditions) + "\n Далее представлен фрагмент диалога с пользователем."}] + chat
-        result = client.chat(model=config.mercury_model, messages=messages)
+        result = client.chat(model=config.mercury_model, messages=messages)['message']['content']
+        print(result)
         if result in triggers: return suffixes[triggers.index(result)]
         return ''
 
