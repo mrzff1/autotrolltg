@@ -116,7 +116,6 @@ class mercury: # классификатор сообщений
         
         messages = [{'role': 'system', 'content': "Выведи только одно ключевое слово согласно наиболее подходящему условию касательно диалога с пользователем. Условия: \nЕсли ничего не подходит, выведи \"nothing\"" + "\n".join(conditions) + "\n Далее представлен фрагмент диалога с пользователем."}] + chat
         result = client.chat(model=config.mercury_model, messages=messages)['message']['content']
-        print(result)
         if result in triggers: return suffixes[triggers.index(result)]
         return ''
 
