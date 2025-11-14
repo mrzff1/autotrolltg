@@ -10,7 +10,7 @@ import datetime
 # ИНИЦИАЛИЗАЦИЯ #
 # # # # # # # # #
 
-client = Client(host='http://localhost:11435') # адрес сервера ollama, по умолчанию localhost:11434
+client = Client(host='http://localhost:11434') # адрес сервера ollama, по умолчанию localhost:11434
 
 # заполните profile.json своими данными (создайте приложение на https://my.telegram.org и скопируйте API_ID и API_HASH)
 def load_profile(filepath='profile.json'):
